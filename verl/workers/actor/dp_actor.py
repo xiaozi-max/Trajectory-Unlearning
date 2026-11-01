@@ -46,6 +46,7 @@ from verl.utils.seqlen_balancing import get_reverse_idx, rearrange_micro_batches
 from verl.utils.torch_functional import logprobs_from_logits
 from verl.utils.ulysses import gather_outpus_and_unpad, ulysses_pad_and_slice_inputs, ulysses_pad
 from verl.workers.actor import BasePPOActor
+from risk_aware_girpo.weighting import POLICY_WEIGHT_KEY, apply_policy_weights
 
 if is_cuda_available:
     from flash_attn.bert_padding import index_first_axis, pad_input, rearrange, unpad_input
@@ -984,6 +985,8 @@ class DataParallelPPOActor(BasePPOActor):
             raise RuntimeError("SP/ID environment auxiliary loss is not supported with actor.use_dynamic_bsz=True.")
 
         select_keys = ["responses", "input_ids", "attention_mask", "position_ids", "old_log_probs", "advantages"]
+        if POLICY_WEIGHT_KEY in data.batch:
+            select_keys.append(POLICY_WEIGHT_KEY)
         opd_loss_coef = float(self.config.get("opd_loss_coef", 0.0) or 0.0)
         skill_gen_loss_coef = float(self.config.get("skill_gen_loss_coef", 0.0) or 0.0)
         traj_skill_gen_payload = data.meta_info.get("traj_skill_gen")
@@ -1136,6 +1139,7 @@ class DataParallelPPOActor(BasePPOActor):
 
                     old_log_prob = data["old_log_probs"]
                     advantages = data["advantages"]
+                    advantages = apply_policy_weights(advantages, data.get(POLICY_WEIGHT_KEY))
 
                     clip_ratio = self.config.clip_ratio
                     clip_ratio_low = self.config.clip_ratio_low if self.config.clip_ratio_low is not None else clip_ratio

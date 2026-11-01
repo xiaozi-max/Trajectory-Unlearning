@@ -135,6 +135,8 @@ KNOWN_EXTRA_NON_TENSOR_KEYS = {
     # ForgetTrajectoryInjectingCollector's match_key -- see that class's
     # docstring and load_forget_full_trajectories's key_field parameter.
     "task_key",
+    # MT-AgentRisk stable join key, threaded through rollout_loop.py.
+    "task_id",
 }
 
 

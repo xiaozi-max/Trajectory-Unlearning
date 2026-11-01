@@ -1,0 +1,13 @@
+[llm.agent]
+model = "openai/Qwen/Qwen2.5-Coder-3B-Instruct"
+base_url = "http://127.0.0.1:8000/v1"
+api_key = "EMPTY"
+
+[llm.env]
+model = "openai/Qwen/Qwen2.5-Coder-3B-Instruct"
+base_url = "http://127.0.0.1:8000/v1"
+api_key = "EMPTY"
+
+[mcp]
+# Copy the MCP section from ToolShield's agentrisk/agent_config/config.toml.
+# Keep service tokens in environment variables, never in this repository.

@@ -76,6 +76,7 @@ from unlearn.prompting import (
 )
 from unlearn.skill_gen import SkillGenRewardConfig, compute_skill_gen_reward
 from agent_system.multi_turn_rollout import TrajectoryCollector, adjust_batch
+from risk_aware_girpo.weighting import attach_policy_weights
 
 WorkerType = Type[Worker]
 module_logger = logging.getLogger(__name__)
@@ -3426,6 +3427,12 @@ class RayPPOTrainer:
                                         file=sys.stderr,
                                         flush=True,
                                     )
+
+                        # Risk-aware GiRPO: create token-shaped actor weights
+                        # after real-only advantage statistics are complete.
+                        # This leaves rewards, returns, masks, and the policy
+                        # loss denominator unchanged.
+                        batch = attach_policy_weights(batch)
 
                     # update critic
                     if self.use_critic:

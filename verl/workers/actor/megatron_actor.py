@@ -48,6 +48,7 @@ from verl.utils.py_functional import append_to_dict
 from verl.utils.seqlen_balancing import get_reverse_idx, rearrange_micro_batches
 from verl.utils.torch_functional import broadcast_dict_tensor
 from verl.workers.actor import BasePPOActor
+from risk_aware_girpo.weighting import POLICY_WEIGHT_KEY, apply_policy_weights
 
 __all__ = ["MegatronPPOActor"]
 
@@ -267,6 +268,8 @@ class MegatronPPOActor(BasePPOActor):
 
         """
         select_keys = ["responses", "input_ids", "attention_mask", "position_ids", "old_log_probs", "advantages"]
+        if POLICY_WEIGHT_KEY in data.batch:
+            select_keys.append(POLICY_WEIGHT_KEY)
         if self.config.use_kl_loss:
             select_keys.append("ref_log_prob")
         data = data.select(batch_keys=select_keys)
@@ -338,6 +341,7 @@ class MegatronPPOActor(BasePPOActor):
             if not forward_only:
                 old_log_prob = data["old_log_probs"]
                 advantages = data["advantages"]
+                advantages = apply_policy_weights(advantages, data.get(POLICY_WEIGHT_KEY))
 
                 clip_ratio = meta_info["clip_ratio"]
                 clip_ratio_low = self.config.clip_ratio_low if self.config.clip_ratio_low is not None else clip_ratio

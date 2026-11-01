@@ -1,0 +1,6 @@
+-e sources/ToolShield-main
+-e sources/OpenHands-0.54.0
+fastapi
+litellm==1.74.8
+pyyaml
+uvicorn

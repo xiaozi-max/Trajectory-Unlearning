@@ -471,12 +471,14 @@ class TrajectoryCollector:
         obs_anchors = obs.get('anchor', None)
         obs_game_files = obs.get('game_file', None)
         obs_task_keys = obs.get('task_key', None)
+        obs_task_ids = obs.get('task_id', None)
         obs_text = obs_texts[item] if obs_texts is not None else None
         obs_text_base = obs_base_texts[item] if obs_base_texts is not None else obs_text
         obs_image = obs_images[item] if obs_images is not None else None
         obs_anchor = obs_anchors[item] if obs_anchors is not None else None
         obs_game_file = obs_game_files[item] if obs_game_files is not None else None
         obs_task_key = obs_task_keys[item] if obs_task_keys is not None else None
+        obs_task_id = obs_task_ids[item] if obs_task_ids is not None else None
         is_multi_modal = obs_image is not None
 
         _obs_anchor = torch_to_numpy(obs_anchor, is_object=True) if isinstance(obs_anchor, torch.Tensor) else obs_anchor
@@ -587,6 +589,7 @@ class TrajectoryCollector:
             'anchor_obs': _obs_anchor,
             'game_file': "" if obs_game_file is None else str(obs_game_file),
             'task_key': "" if obs_task_key is None else str(obs_task_key),
+            'task_id': "" if obs_task_id is None else str(obs_task_id),
             'obs_text': obs_content,
             'obs_text_base': "" if obs_text_base is None else str(obs_text_base),
             'index': item,

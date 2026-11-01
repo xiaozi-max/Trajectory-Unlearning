@@ -1,5 +1,22 @@
 # Trajectory Unlearning on LLM-based Agents
 
+> This fork adds Risk-aware GiRPO for MT-AgentRisk. See
+> `docs/MT_AGENTRISK_IMPLEMENTATION_REPORT.md` for the architecture, experiment
+> scripts, test evidence, and remaining external setup requirements.
+
+For the MT-AgentRisk fork, use the reproducible project-local setup and launchers:
+
+```bash
+bash scripts/experiments/setup_envs.sh
+bash scripts/experiments/run_tests.sh
+bash scripts/experiments/start_gateway.sh
+bash scripts/experiments/run_mt_online.sh jev_girpo
+```
+
+The scripts keep environments, Hugging Face/W&B caches, temporary build files,
+gateway sessions, and outputs under `work/`. They also use the adapters in
+`common_utils/` for GPU selection and optional Feishu notifications.
+
 
 
 ## 🛠️ Installation

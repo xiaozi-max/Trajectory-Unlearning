@@ -6,3 +6,7 @@ __pycache__/
 outputs/
 wandb/
 .idea/
+
+# Local reference snapshots, gated datasets, caches, and test artifacts.
+sources/
+work/
