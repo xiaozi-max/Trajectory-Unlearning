@@ -3,6 +3,16 @@ set -o pipefail
 
 RISK_GIRPO_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 export RISK_GIRPO_ROOT
+
+# Keep machine-local credentials and paths in one git-ignored file. Launchers
+# source this helper, so users do not need to repeat exports in every shell.
+if [[ -f "$RISK_GIRPO_ROOT/.env" ]]; then
+    set -a
+    # shellcheck disable=SC1091
+    source "$RISK_GIRPO_ROOT/.env"
+    set +a
+fi
+
 export HF_HOME="${HF_HOME:-$RISK_GIRPO_ROOT/work/huggingface}"
 export WANDB_PROJECT="${WANDB_PROJECT:-risk-aware-girpo}"
 export WANDB_DIR="${WANDB_DIR:-$RISK_GIRPO_ROOT/work/wandb}"

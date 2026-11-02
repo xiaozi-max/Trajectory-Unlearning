@@ -1,4 +1,5 @@
 .env
+configs/mt_agentrisk/agent_config.toml
 .DS_Store
 __pycache__/
 *.pyc

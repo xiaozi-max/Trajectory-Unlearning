@@ -10,10 +10,7 @@ gateway_env="${GATEWAY_ENV:-$root/work/envs/gateway-py312}"
 export PIP_CONSTRAINT=
 export PIP_CACHE_DIR="${PIP_CACHE_DIR:-$root/work/pip-cache}"
 
-[[ -d "$root/sources/OpenHands-0.54.0" ]] || {
-    echo "Missing sources/OpenHands-0.54.0; clone the ToolShield-pinned tag first." >&2
-    exit 2
-}
+"$root/scripts/experiments/setup_sources.sh"
 
 python -m venv "$trainer_env"
 "$trainer_env/bin/python" -m pip install --upgrade pip
