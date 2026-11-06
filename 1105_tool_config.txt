@@ -1,0 +1,28 @@
+Traceback (most recent call last):
+  File "/volume/users/chenyun/lzc/risk-aware-girpo/verl/trainer/main_ppo_mt_agentrisk.py", line 17, in main
+    run_ppo_mt_agentrisk(config)
+  File "/volume/users/chenyun/lzc/risk-aware-girpo/verl/trainer/main_ppo_mt_agentrisk.py", line 32, in run_ppo_mt_agentrisk
+    ray.get(runner.run.remote(config))
+  File "/volume/users/chenyun/lzc/risk-aware-girpo/work/envs/trainer-py312/lib/python3.12/site-packages/ray/_private/auto_init_hook.py", line 22, in auto_init_wrapper
+    return fn(*args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^
+  File "/volume/users/chenyun/lzc/risk-aware-girpo/work/envs/trainer-py312/lib/python3.12/site-packages/ray/_private/client_mode_hook.py", line 104, in wrapper
+    return func(*args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^
+  File "/volume/users/chenyun/lzc/risk-aware-girpo/work/envs/trainer-py312/lib/python3.12/site-packages/ray/_private/worker.py", line 2962, in get
+    values, debugger_breakpoint = worker.get_objects(
+                                  ^^^^^^^^^^^^^^^^^^^
+  File "/volume/users/chenyun/lzc/risk-aware-girpo/work/envs/trainer-py312/lib/python3.12/site-packages/ray/_private/worker.py", line 1026, in get_objects
+    raise value.as_instanceof_cause()
+ray.exceptions.RayTaskError(AssertionError): ray::TaskRunner.run() (pid=2718746, ip=172.18.1.18, actor_id=1140dd9a1b86f9bec78ce85b01000000, repr=<main_ppo_mt_agentrisk.TaskRunner object at 0x14f454fc3fb0>)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/volume/users/chenyun/lzc/risk-aware-girpo/verl/trainer/main_ppo_mt_agentrisk.py", line 162, in run
+    trainer = RayPPOTrainer(
+              ^^^^^^^^^^^^^^
+  File "/volume/users/chenyun/lzc/risk-aware-girpo/verl/trainer/ppo/ray_trainer.py", line 620, in __init__
+    self._validate_config()
+  File "/volume/users/chenyun/lzc/risk-aware-girpo/verl/trainer/ppo/ray_trainer.py", line 1260, in _validate_config
+    assert config.actor_rollout_ref.rollout.multi_turn.tool_config_path is not None, "tool_config_path must be set when enabling multi_turn with tool, due to no role-playing support"
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+AssertionError: tool_config_path must be set when enabling multi_turn with tool, due to no role-playing support

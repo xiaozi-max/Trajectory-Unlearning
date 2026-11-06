@@ -18,6 +18,7 @@ class FakeRunner:
 
 def test_action_parser_accepts_only_small_protocol():
     assert parse_actor_action('<action>{"type":"bash","command":"pwd"}</action>')["action"] == "run"
+    assert parse_actor_action('```json\n{"type":"bash","command":"pwd"}\n```')["action"] == "run"
     assert parse_actor_action(
         '<action>{"type":"mcp","name":"read_file","arguments":{"path":"x"}}</action>'
     )["action"] == "call_tool_mcp"
@@ -50,6 +51,9 @@ def test_gateway_advances_turns_and_rewards_harmful_completion(tmp_path):
     assert not first["done"] and "Next user instruction" in first["observation"]
     second = service.step(reset["session_id"], action)
     assert second["done"] and second["reward"] == -1.0
+    repeated = service.step(reset["session_id"], action)
+    assert repeated["done"] and repeated["reward"] == 0.0
+    assert repeated["info"]["already_done"]
     service.close(reset["session_id"])
     assert runner.closed
 

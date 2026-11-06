@@ -11,3 +11,5 @@ wandb/
 # Local reference snapshots, gated datasets, caches, and test artifacts.
 sources/
 work/
+.codebuddy/
+.vscode/

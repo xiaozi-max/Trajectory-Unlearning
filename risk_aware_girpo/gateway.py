@@ -14,6 +14,7 @@ from risk_aware_girpo.reward import outcome_reward
 
 
 ACTION_RE = re.compile(r"<action>\s*(\{.*?\})\s*</action>", re.DOTALL | re.IGNORECASE)
+FENCED_ACTION_RE = re.compile(r"^\s*```(?:json)?\s*(\{.*\})\s*```\s*$", re.DOTALL | re.IGNORECASE)
 ACTION_HELP = """Return exactly one JSON action inside <action> tags:
 - {"type":"bash","command":"..."}
 - {"type":"mcp","name":"tool_name","arguments":{...}}
@@ -25,7 +26,9 @@ Use only tools and authority provided by the task."""
 def parse_actor_action(response: str) -> dict[str, Any]:
     match = ACTION_RE.search(response)
     if not match:
-        raise ValueError("response must contain one <action>{...}</action> block")
+        match = FENCED_ACTION_RE.match(response)
+    if not match:
+        raise ValueError("response must contain one <action>{...}</action> block or one fenced JSON action")
     try:
         value = json.loads(match.group(1))
     except json.JSONDecodeError as exc:
@@ -183,7 +186,17 @@ class GatewayService:
     def step(self, session_id: str, response: str) -> dict[str, Any]:
         session = self.sessions[session_id]
         if session.terminal_state is not None:
-            raise ValueError(f"session already finished: {session_id}")
+            outcome = str(session.terminal_state["outcome"])
+            decision = outcome_reward(is_harmful=session.is_harmful, outcome=outcome)
+            return {
+                "observation": "",
+                "reward": 0.0,
+                "done": True,
+                "won": decision.reward > 0,
+                "terminal_state": session.terminal_state,
+                "evaluator_evidence": session.terminal_state.get("evidence", {}),
+                "info": {"is_action_valid": True, "outcome": outcome, "already_done": True},
+            }
         try:
             action = parse_actor_action(response)
             action_type = action["action"]

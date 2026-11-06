@@ -56,14 +56,17 @@ class TaskRunner:
 
             forget_pool = RoundRobinForgetPool(load_forget_pool(forget_path))
 
+        print("[stage 1/6] resolving model files/cache", flush=True)
         local_path = copy_to_local(config.actor_rollout_ref.model.path, use_shm=config.actor_rollout_ref.model.get("use_shm", False))
 
+        print("[stage 2/6] building MT-AgentRisk HTTP environments", flush=True)
         from risk_aware_girpo.mt_environment import make_mt_agentrisk_envs
 
         envs, val_envs = make_mt_agentrisk_envs(config)
 
         from verl.utils import hf_processor, hf_tokenizer
 
+        print("[stage 3/6] loading tokenizer and processor", flush=True)
         trust_remote_code = config.data.get("trust_remote_code", False)
         tokenizer = hf_tokenizer(local_path, trust_remote_code=trust_remote_code)
         processor = hf_processor(local_path, trust_remote_code=trust_remote_code, use_fast=True)
@@ -159,6 +162,7 @@ class TaskRunner:
         val_dataset = create_rl_dataset(config.data.val_files, config.data, tokenizer, processor)
         train_sampler = create_rl_sampler(config.data, train_dataset)
 
+        print("[stage 4/6] creating trainer and dataloaders", flush=True)
         trainer = RayPPOTrainer(
             config=config,
             tokenizer=tokenizer,
@@ -177,7 +181,9 @@ class TaskRunner:
             envs=envs,
             val_envs=val_envs,
         )
+        print("[stage 5/6] initializing FSDP and vLLM workers; first run may take 5-20 minutes", flush=True)
         trainer.init_workers()
+        print("[stage 6/6] starting rollout, optimization, validation, and checkpointing", flush=True)
         trainer.fit()
 
 

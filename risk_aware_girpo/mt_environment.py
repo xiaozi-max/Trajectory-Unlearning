@@ -2,6 +2,10 @@ from __future__ import annotations
 
 import json
 import itertools
+import os
+import time
+from datetime import datetime
+import urllib.error
 import urllib.request
 from dataclasses import dataclass
 from typing import Any, Protocol
@@ -35,8 +39,12 @@ class OpenHandsHTTPBackend:
             headers={"Content-Type": "application/json"},
             method="POST",
         )
-        with urllib.request.urlopen(request, timeout=self.timeout_seconds) as response:
-            return json.load(response)
+        try:
+            with urllib.request.urlopen(request, timeout=self.timeout_seconds) as response:
+                return json.load(response)
+        except urllib.error.HTTPError as exc:
+            detail = exc.read().decode("utf-8", errors="replace")
+            raise RuntimeError(f"Gateway {path} returned HTTP {exc.code}: {detail}") from exc
 
     def reset(self, task_id: str, seed: int) -> dict[str, Any]:
         return self._request("/reset", {"task_id": task_id, "seed": seed})
@@ -74,7 +82,14 @@ class MTAgentRiskVectorEnv:
         override_task_ids, override_seeds = self._overrides(kwargs)
         task_ids = list(override_task_ids or self.task_ids)
         seeds = list(override_seeds or self.seeds)
-        results = [self.backend.reset(task_id, int(seed)) for task_id, seed in zip(task_ids, seeds, strict=True)]
+        started = time.monotonic()
+        results = []
+        total = len(task_ids)
+        for index, (task_id, seed) in enumerate(zip(task_ids, seeds, strict=True), 1):
+            results.append(self.backend.reset(task_id, int(seed)))
+            elapsed = time.monotonic() - started
+            eta = elapsed / index * (total - index)
+            print(f"[event_time={datetime.now().astimezone().isoformat(timespec='seconds')}] [rollout reset] {index}/{total} elapsed={elapsed:.1f}s eta={eta:.1f}s task={task_id}", flush=True)
         self.sessions = [str(result["session_id"]) for result in results]
         self.current_task_ids = task_ids
         observations = [str(result["observation"]) for result in results]
@@ -92,7 +107,14 @@ class MTAgentRiskVectorEnv:
     def step(self, actions: list[str]):
         if len(actions) != len(self.sessions):
             raise ValueError("one action is required for each active session")
-        results = [self.backend.step(session, action) for session, action in zip(self.sessions, actions, strict=True)]
+        started = time.monotonic()
+        results = []
+        total = len(actions)
+        for index, (session, action) in enumerate(zip(self.sessions, actions, strict=True), 1):
+            results.append(self.backend.step(session, action))
+            elapsed = time.monotonic() - started
+            eta = elapsed / index * (total - index)
+            print(f"[event_time={datetime.now().astimezone().isoformat(timespec='seconds')}] [rollout env-step] {index}/{total} elapsed={elapsed:.1f}s eta={eta:.1f}s", flush=True)
         observations = [str(result.get("observation", "")) for result in results]
         rewards = np.asarray([float(result.get("reward", 0.0)) for result in results], dtype=np.float32)
         dones = np.asarray([bool(result.get("done", False)) for result in results], dtype=np.bool_)
@@ -133,7 +155,7 @@ class MTAgentRiskEnvironmentManager:
         observations, rewards, dones, infos = self.envs.step(text_actions)
         task_ids = [info.get("task_id", "") for info in infos]
         for info in infos:
-            info["is_action_valid"] = True
+            info.setdefault("is_action_valid", True)
         return {
             "text": observations,
             "image": None,
@@ -141,7 +163,7 @@ class MTAgentRiskEnvironmentManager:
             "task_id": task_ids,
         }, rewards, dones, infos
 
-    def success_evaluator(self, *, total_infos, total_batch_list):
+    def success_evaluator(self, *, total_infos, total_batch_list, episode_rewards=None, episode_lengths=None):
         values = []
         for infos in total_infos:
             terminal = next((info for info in reversed(infos) if info), {})
@@ -178,7 +200,7 @@ def make_mt_agentrisk_envs(config):
     train_ids = _repeat_to_size(_load_task_ids(str(config.env.mt_agentrisk.train_manifest)), train_size)
     val_ids = _repeat_to_size(_load_task_ids(str(config.env.mt_agentrisk.val_manifest)), val_size)
     train_seed = int(config.env.seed)
-    backend = OpenHandsHTTPBackend(endpoint)
+    backend = OpenHandsHTTPBackend(endpoint, timeout_seconds=float(os.environ.get("OPENHANDS_GATEWAY_TIMEOUT", "900")))
     train = MTAgentRiskVectorEnv(backend, train_ids, [train_seed + i for i in range(train_size)])
     validation = MTAgentRiskVectorEnv(backend, val_ids, [train_seed + 1000 + i for i in range(val_size)])
     return MTAgentRiskEnvironmentManager(train), MTAgentRiskEnvironmentManager(validation)

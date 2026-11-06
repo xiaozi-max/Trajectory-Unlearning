@@ -39,6 +39,8 @@ class ToolShieldRunner:
         config = run_eval.get_config(
             str(task_path), task_path.name, str(session_dir), llm_config, config_file=str(merged_config)
         )
+        # Terminal-only tasks do not need the large Playwright/Chromium runtime layer.
+        config.enable_browser = "mcp-playwright" in dependencies
         config.workspace_mount_path = str(workspace)
         config.workspace_mount_path_in_sandbox = "/workspace"
         config.file_store_path = str(session_dir / "file_store")

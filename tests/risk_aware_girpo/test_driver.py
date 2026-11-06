@@ -11,6 +11,12 @@ def test_driver_threads_task_and_seed():
     assert rows[1]["env_kwargs"] == {"task_id": "task-b", "seed": 8}
 
 
+def test_driver_repeats_pilot_rows_to_requested_size():
+    rows = driver_rows([{"task_id": "task-a"}], seed=7, size=4)
+    assert len(rows) == 4
+    assert [row["env_kwargs"]["seed"] for row in rows] == [7, 8, 9, 10]
+
+
 def test_driver_writes_verl_parquet(tmp_path):
     manifest = tmp_path / "train.jsonl"
     manifest.write_text(json.dumps({"task_id": "task-a"}) + "\n", encoding="utf-8")

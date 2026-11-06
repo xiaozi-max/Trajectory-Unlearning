@@ -1796,6 +1796,7 @@ class RayPPOTrainer:
         sample_inputs = []
         sample_outputs = []
         sample_scores = []
+        sample_extra_infos = defaultdict(list)
 
         for test_data in self.val_dataloader:
             test_batch = DataProto.from_single_dict(test_data)
@@ -1807,11 +1808,6 @@ class RayPPOTrainer:
             if self.config.reward_model.enable and test_batch[0].non_tensor_batch["reward_model"]["style"] == "model":
                 return {}
 
-            # Store original inputs
-            input_ids = test_batch.batch["input_ids"]
-            # TODO: Can we keep special tokens except for padding tokens?
-            input_texts = [self.tokenizer.decode(ids, skip_special_tokens=True) for ids in input_ids]
-            sample_inputs.extend(input_texts)
 
             batch_keys_to_pop = ["input_ids", "attention_mask", "position_ids"]
             non_tensor_batch_keys_to_pop = ["raw_prompt_ids", "data_source"]
@@ -1855,10 +1851,22 @@ class RayPPOTrainer:
             print('validation generation end')
             del test_batch
             test_batch = test_output_gen_batch
+            # The collector returns one row per environment step. Decode both sides
+            # from that returned batch so validation is not truncated.
+            prompt_ids = test_output_gen_batch.batch["prompts"]
+            input_texts = [self.tokenizer.decode(ids, skip_special_tokens=True) for ids in prompt_ids]
+            sample_inputs.extend(input_texts)
             # Store generated outputs
             output_ids = test_output_gen_batch.batch["responses"]
             output_texts = [self.tokenizer.decode(ids, skip_special_tokens=True) for ids in output_ids]
             sample_outputs.extend(output_texts)
+            for key in (
+                "sample_id", "rollout_id", "step_num", "step_id", "uid",
+                "traj_uid", "task_id", "episode_rewards", "episode_lengths",
+                "tool_callings", "obs_text", "obs_text_base", "is_action_valid",
+            ):
+                if key in test_output_gen_batch.non_tensor_batch:
+                    sample_extra_infos[key].extend(test_output_gen_batch.non_tensor_batch[key])
 
             # test_batch = test_batch.union(test_output_gen_batch)
 
@@ -1883,6 +1891,16 @@ class RayPPOTrainer:
                         assert test_batch.non_tensor_batch[k][0] == test_batch.non_tensor_batch[k][i], f'not all success_rate are the same, 0: {test_batch.non_tensor_batch[k][0]}, {i}: {test_batch.non_tensor_batch[k][i]}'
 
         self._maybe_log_val_generations(inputs=sample_inputs, outputs=sample_outputs, scores=sample_scores)
+        validation_data_dir = self.config.trainer.get("validation_data_dir", None)
+        if validation_data_dir:
+            self._dump_generations(
+                inputs=sample_inputs,
+                outputs=sample_outputs,
+                scores=sample_scores,
+                reward_extra_infos_dict={},
+                dump_path=validation_data_dir,
+                rollout_extra_infos_dict=sample_extra_infos,
+            )
 
         reward_tensor = torch.cat(reward_tensor_lst, dim=0).sum(-1).cpu()  # (batch_size,)
         data_sources = np.concatenate(data_source_lst, axis=0)
@@ -3468,6 +3486,10 @@ class RayPPOTrainer:
                                     "step_id",
                                     "uid",
                                     "traj_uid",
+                                    "task_id",
+                                    "episode_rewards",
+                                    "episode_lengths",
+                                    "tool_callings",
                                     "obs_text",
                                     "obs_text_base",
                                     "is_action_valid",
