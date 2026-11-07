@@ -11,5 +11,5 @@ echo "[collect] starting frozen-base rollout collection: rows=$TRAIN_DRIVER_SIZE
 bash "$root/scripts/experiments/run_mt_online.sh" grpo "$@"
 echo "[collect] rollout finished; building forget pool"
 mapfile -t rollouts < <(find "$OUTPUT_DIR/rollouts" -name '*.jsonl' -type f | sort)
-"${TRAINER_ENV:-$root/work/envs/trainer-py312}/bin/python" "$root/scripts/build_forget_pool_from_rollouts.py" "${rollouts[@]}" --output "$root/work/forget_pool/terminal_base_unsafe.jsonl"
+"${TRAINER_ENV:-$root/work/envs/trainer-py312}/bin/python" "$root/scripts/build_forget_pool_from_rollouts.py" "${rollouts[@]}" --output "$root/work/forget_pool/terminal_base_unsafe.jsonl" --all-output "$root/work/train_attempts.jsonl"
 echo "FORGET_POOL=$root/work/forget_pool/terminal_base_unsafe.jsonl"

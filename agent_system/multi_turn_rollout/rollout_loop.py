@@ -17,6 +17,7 @@ import torch
 import numpy as np
 import re
 import os
+import json
 from verl import DataProto
 from verl.utils.dataset.rl_dataset import collate_fn
 from verl.utils.model import compute_position_id_with_mask
@@ -50,6 +51,15 @@ class TrajectoryCollector:
         for idx, value in enumerate(values):
             array[idx] = value
         return array
+
+    @staticmethod
+    def _provenance_scalar(value: Any) -> Any:
+        """Keep env provenance collate-safe (plain scalars / JSON strings)."""
+        if value is None:
+            return ""
+        if isinstance(value, (dict, list, tuple)):
+            return json.dumps(value, ensure_ascii=False, sort_keys=True, default=str)
+        return value
 
     @staticmethod
     def _to_text(value: Any) -> str:
@@ -843,6 +853,15 @@ class TrajectoryCollector:
             else:
                 batch.non_tensor_batch['is_action_valid'] = np.ones(batch_size, dtype=bool)
 
+            # MT-AgentRisk provenance: carry the environment's explicit outcome
+            # and evaluator evidence into the rollout dump so offline tooling can
+            # identify dangerous trajectories without guessing from reward sign.
+            for key in ('outcome', 'terminal_state', 'evaluator_evidence', 'is_harmful'):
+                if key in infos[0]:
+                    batch.non_tensor_batch[key] = self._object_array(
+                        [self._provenance_scalar(info.get(key)) for info in infos]
+                    )
+
             if 'tool_calling' in infos[0]:
                 tool_callings[active_masks] += np.array([info['tool_calling'] for info in infos], dtype=np.float32)[active_masks]
             # Create reward tensor, only assign rewards for active environments
@@ -1051,3 +1070,10 @@ class TrajectoryCollector:
             return gen_batch_output
         finally:
             self._stop_rollout_generation_session(actor_rollout_wg, session_started)
+            # MT-AgentRisk sessions own one Docker sandbox each. Without an
+            # explicit close the gateway leaks containers until the ECS OOMs.
+            if envs.__class__.__module__.startswith("risk_aware_girpo."):
+                try:
+                    envs.close()
+                except Exception as exc:
+                    print(f"[warning] failed to close MT-AgentRisk sessions: {exc}", flush=True)

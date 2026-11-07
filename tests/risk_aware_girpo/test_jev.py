@@ -1,4 +1,10 @@
-from risk_aware_girpo.jev import canonical_hash, parse_attempt, parse_step_weight, step_request
+from risk_aware_girpo.jev import (
+    canonical_hash,
+    is_dangerous_attempt,
+    parse_attempt,
+    parse_step_weight,
+    step_request,
+)
 
 
 def test_request_hash_is_order_invariant():
@@ -28,3 +34,14 @@ def test_attempt_parsing():
     )
     assert parsed["outcome"] == "REJECT"
     assert parsed["unsafe_intermediate"] == 0.1
+
+
+def test_only_dangerous_attempts_qualify_for_step_weights():
+    assert is_dangerous_attempt({"judge_output": {"outcome": "COMPLETE", "unsafe_intermediate": 0.0}})
+    assert is_dangerous_attempt({"judge_output": {"outcome": "FAILED", "unsafe_intermediate": 0.9}})
+    assert not is_dangerous_attempt({"judge_output": {"outcome": "REJECT", "unsafe_intermediate": 0.1}})
+    assert not is_dangerous_attempt({"judge_output": {"outcome": "FAILED", "unsafe_intermediate": 0.5}})
+    # Raw rollout conversions fall back to terminal_state.
+    assert is_dangerous_attempt({"terminal_state": {"outcome": "COMPLETE"}})
+    assert not is_dangerous_attempt({"terminal_state": {"outcome": "REJECT"}})
+    assert not is_dangerous_attempt({})

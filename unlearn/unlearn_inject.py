@@ -137,6 +137,13 @@ KNOWN_EXTRA_NON_TENSOR_KEYS = {
     "task_key",
     # MT-AgentRisk stable join key, threaded through rollout_loop.py.
     "task_id",
+    # MT-AgentRisk environment provenance (outcome / evidence / harmfulness).
+    # Descriptive only; never used by reward, advantage or loss. Backfilled on
+    # injected rows with the generic real_values[0] fallback so alignment holds.
+    "outcome",
+    "terminal_state",
+    "evaluator_evidence",
+    "is_harmful",
 }
 
 

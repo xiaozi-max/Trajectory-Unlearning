@@ -3493,6 +3493,10 @@ class RayPPOTrainer:
                                     "obs_text",
                                     "obs_text_base",
                                     "is_action_valid",
+                                    "outcome",
+                                    "terminal_state",
+                                    "evaluator_evidence",
+                                    "is_harmful",
                                 )
                                 if key in batch.non_tensor_batch
                             }
